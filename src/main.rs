@@ -1,30 +1,33 @@
-use async_graphql::{EmptyMutation, EmptySubscription, Schema};
-use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
-use axum::routing::Router;
-use axum::routing::post;
+use tracing::{Level, event};
+use tracing_subscriber;
 
+use crate::config::Config;
+
+mod config;
 mod db;
 mod query;
+mod router;
 mod service;
-
-use crate::db::DB;
-use crate::query::Query;
-
-async fn graphpl_handler(graphql_request: GraphQLRequest) -> GraphQLResponse {
-    let query = Query { db: DB {} };
-
-    let schema = Schema::new(query, EmptyMutation, EmptySubscription);
-
-    let res = schema.execute(graphql_request.into_inner()).await;
-
-    return res.into();
-}
 
 #[tokio::main]
 async fn main() {
-    let app = Router::new().route("/gql", post(graphpl_handler));
+    // Setup tracing
+    tracing_subscriber::fmt::init();
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    //
+    let cfg = Config::new();
 
-    axum::serve(listener, app).await.unwrap();
+    // Define a graphql router.
+    let app = router::get_routes();
+
+    // Bind to localhost:3000.
+    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", cfg.port))
+        .await
+        .expect(&format!("Failed to bind to host at {}.", cfg.port));
+
+    // Serve app.
+    event!(Level::INFO, "Starting server on port {}...", cfg.port);
+    axum::serve(listener, app)
+        .await
+        .expect("Failed to start server.");
 }
