@@ -11,5 +11,7 @@ tower-http = {version = "0.6.7", features = ["cors"]}
 serde = {version = "1.0.228", features = ["derive"]}
 tokio = { version = "1.48.0", features = ["full"] }
 tracing = {version = "0.1.41"}
-tracing-subscriber = {version = "0.3.20"}
+tracing-subscriber = {version = "0.3.20", features = ["tracing-log", "env-filter"]}
 serde_json = {version = "1.0.145"}
+sqlx = {version = "0.8.6", features = ["runtime-tokio", "tls-native-tls", "postgres", "uuid"]}
+dotenv = {version = "0.15.0"}

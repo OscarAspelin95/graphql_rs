@@ -1,21 +1,25 @@
 # graphql_rs
 Example of how to use graphql with Rust.
 
-# Dependencies
-axum for routing, etc.
-serde for serialization/de-serialization.
-tokio for all async stuff.
-async-graphql.
+## Getting started
+First, make sure docker (with `compose`) is installed.
 
-# Components
-### service.rs
-We define a basic user with id, name, email, city and country.
+`Make` - will run all necessary commands to start services.
 
-### db.rs
-We just use it for mocking data by implementing a struct that can return some made up users.
+## Endpoints
+`localhost:5050` - Postgres admin.
 
-### query.rs
-We define functionality to extract one user by id as well as extracting all users.
 
-### main.rs
-Main entrypoint. We make the main function async with tokio, create a routing with axum, add a tcp-listener with tokio and serve it with axum.
+## Migrations
+Uses (and requires) sqlx-cli. Install via `cargo install`.
+
+### Add migration
+`sqlx migrate add -r <name> --source ./db/migrations`
+
+Then modify the `up` and `down` migration files.
+
+### Apply migrations
+`sqlx migrate run --source ./db/migrations --database-url <DB_URL>`
+
+### Revert migrations
+`sqlx migrate revert --source ./db/migrations --database-url <DB_URL>`

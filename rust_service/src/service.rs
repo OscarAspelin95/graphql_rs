@@ -11,6 +11,18 @@ pub struct User {
     pub country: String,
 }
 
+impl User {
+    pub fn mock() -> Self {
+        Self {
+            id: "1".into(),
+            name: "Mock".into(),
+            email: "Mock".into(),
+            city: "Mock".into(),
+            country: "Mock".into(),
+        }
+    }
+}
+
 #[Object]
 impl User {
     async fn id(&self) -> &str {
@@ -33,6 +45,7 @@ impl User {
         &self.country
     }
 
+    /// This is where we'd actually run the database query based on user_id.
     async fn todo_lists(&self) -> Vec<Todo> {
         vec![Todo {
             id: 1,
@@ -69,6 +82,8 @@ impl Todo {
         &self.created
     }
 
+    /// This is where we'd actually run the db query
+    /// based on e.g., todo id.
     async fn todo_tasks(&self) -> Vec<TodoTask> {
         vec![TodoTask {
             id: 1,
