@@ -1,128 +1,145 @@
-use async_graphql::{ID, Object};
+use crate::context::Context;
+use juniper::{graphql_object, FieldResult};
+use serde::{Deserialize, Serialize};
+use sqlx::types::time::OffsetDateTime;
+use uuid;
 
-// We can have these things relate to each other
-// e.g., in a database table
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct User {
-    pub id: ID,
-    pub name: String,
-    pub email: String,
-    pub city: String,
-    pub country: String,
+    pub id: String,
+    pub first_name: String,
+    pub last_name: String,
+    pub created_at: OffsetDateTime,
+    pub updated_at: OffsetDateTime,
 }
 
 impl User {
     pub fn mock() -> Self {
         Self {
-            id: "1".into(),
-            name: "Mock".into(),
-            email: "Mock".into(),
-            city: "Mock".into(),
-            country: "Mock".into(),
+            id: uuid::Uuid::now_v7().to_string(),
+            first_name: "Mock".into(),
+            last_name: "Mock".into(),
+            created_at: OffsetDateTime::now_utc(),
+            updated_at: OffsetDateTime::now_utc(),
         }
     }
 }
 
-#[Object]
+#[graphql_object(context = Context)]
 impl User {
-    async fn id(&self) -> &str {
+    fn id(&self) -> &str {
         &self.id
     }
 
-    async fn name(&self) -> &str {
-        &self.name
+    fn first_name(&self) -> &str {
+        &self.first_name
     }
 
-    async fn email(&self) -> &str {
-        &self.email
+    fn last_name(&self) -> &str {
+        &self.last_name
     }
 
-    async fn city(&self) -> &str {
-        &self.city
+    fn created_at(&self) -> String {
+        self.created_at.to_string()
     }
 
-    async fn country(&self) -> &str {
-        &self.country
+    fn updated_at(&self) -> String {
+        self.updated_at.to_string()
     }
 
-    /// This is where we'd actually run the database query based on user_id.
-    async fn todo_lists(&self) -> Vec<Todo> {
-        vec![Todo {
-            id: 1,
-            user_id: 1,
-            name: "TodoList".to_string(),
-            created: "Now".to_string(),
-        }]
+    async fn todo_lists(&self, context: &Context) -> FieldResult<Vec<Todo>> {
+        let pool = &context.db;
+
+        let user_uuid =
+            uuid::Uuid::parse_str(&self.id).map_err(|e| format!("Invalid UUID: {}", e))?;
+
+        let todo_lists = sqlx::query_as!(
+            Todo,
+            "SELECT id, user_id, name, created_at, updated_at FROM public.todo_lists WHERE user_id = $1",
+            user_uuid
+        )
+        .fetch_all(pool)
+        .await?;
+
+        Ok(todo_lists.into_iter().map(Todo::from).collect())
     }
 }
 
-#[derive(Clone)]
 pub struct Todo {
-    pub id: usize,
-    pub user_id: usize,
+    pub id: String,
+    pub user_id: String,
     pub name: String,
-    pub created: String,
+    pub created_at: OffsetDateTime,
+    pub updated_at: OffsetDateTime,
 }
 
-#[Object]
+#[graphql_object(context = Context)]
 impl Todo {
-    async fn id(&self) -> usize {
-        self.id
+    fn id(&self) -> &str {
+        &self.id
     }
 
-    async fn user_id(&self) -> usize {
-        self.user_id
+    fn user_id(&self) -> &str {
+        &self.user_id
     }
 
-    async fn name(&self) -> &str {
+    fn name(&self) -> &str {
         &self.name
     }
 
-    async fn created(&self) -> &str {
-        &self.created
+    fn created_at(&self) -> String {
+        self.created_at.to_string()
     }
 
-    /// This is where we'd actually run the db query
-    /// based on e.g., todo id.
-    async fn todo_tasks(&self) -> Vec<TodoTask> {
+    fn updated_at(&self) -> String {
+        self.updated_at.to_string()
+    }
+
+    fn todo_tasks(&self) -> Vec<TodoTask> {
         vec![TodoTask {
             id: 1,
             todo_id: 1,
             name: "Todo Task 1".to_string(),
             status: "Status".to_string(),
-            created: "Now".to_string(),
+            created_at: OffsetDateTime::now_utc(),
+            updated_at: OffsetDateTime::now_utc(),
         }]
     }
 }
 
 #[derive(Clone)]
 pub struct TodoTask {
-    pub id: usize,
-    pub todo_id: usize,
+    pub id: i32,
+    pub todo_id: i32,
     pub name: String,
     pub status: String,
-    pub created: String,
+    pub created_at: OffsetDateTime,
+    pub updated_at: OffsetDateTime,
 }
 
-#[Object]
+#[graphql_object(context = Context)]
 impl TodoTask {
-    async fn id(&self) -> usize {
+    fn id(&self) -> i32 {
         self.id
     }
 
-    async fn todo_id(&self) -> usize {
+    fn todo_id(&self) -> i32 {
         self.todo_id
     }
 
-    async fn name(&self) -> &str {
+    fn name(&self) -> &str {
         &self.name
     }
 
-    async fn status(&self) -> &str {
+    fn status(&self) -> &str {
         &self.status
     }
 
-    async fn created(&self) -> &str {
-        &self.created
+    fn created_at(&self) -> String {
+        self.created_at.to_string()
+    }
+
+    fn updated_at(&self) -> String {
+        self.updated_at.to_string()
     }
 }

@@ -1,44 +1,39 @@
+use crate::context::Context;
 use crate::service::User;
-use async_graphql::{Context, Object};
-use sqlx::Pool;
-use tracing::{Level, event};
+use juniper::{graphql_object, FieldResult};
 
-pub struct Query {}
+pub struct Query;
 
-#[Object]
+#[graphql_object(context = Context)]
 impl Query {
-    async fn get_user(&self, ctx: &Context<'_>, id: String) -> Option<User> {
-        let pool = ctx
-            .data::<Pool<sqlx::Any>>()
-            .expect("Database pool unavailable.");
+    async fn get_user(user_id: String, context: &Context) -> FieldResult<User> {
+        let pool = &context.db;
 
-        event!(Level::INFO, "{}", id);
-        event!(Level::INFO, "DB pool: {:?}", pool);
+        let user_uuid = uuid::Uuid::parse_str(&user_id).map_err(|err| format!("{:?}", err))?;
 
-        // Query database for user, given the provided ID.
-        Some(User::mock())
+        let user = sqlx::query_as!(
+            User,
+            "SELECT id, first_name, last_name, created_at, updated_at FROM public.users WHERE id = $1",
+            user_uuid
+        ).fetch_one(pool).await?;
+
+        Ok(user)
     }
 
-    async fn get_users(&self, ctx: &Context<'_>) -> Vec<User> {
-        let pool = ctx
-            .data::<Pool<sqlx::Any>>()
-            .expect("Database pool unavailable.");
+    async fn get_all_users(context: &Context) -> FieldResult<Vec<User>> {
+        let pool = &context.db;
 
-        event!(Level::INFO, "DB pool: {:?}", pool);
+        let users = sqlx::query_as!(
+            User,
+            "SELECT id, first_name, last_name, created_at, updated_at FROM public.users"
+        )
+        .fetch_all(pool)
+        .await?;
 
-        // Query database for all users.
-        vec![User::mock()]
+        Ok(users)
     }
 
-    async fn get_users_by_filter(&self, ctx: &Context<'_>, country: Option<String>) -> Vec<User> {
-        let pool = ctx
-            .data::<Pool<sqlx::Any>>()
-            .expect("Database pool unavailable.");
-
-        event!(Level::INFO, "{:?}", country);
-        event!(Level::INFO, "DB pool: {:?}", pool);
-
-        // Query database for users, given a country to filter on.
-        vec![User::mock()]
+    fn api_version() -> &'static str {
+        "1.0"
     }
 }

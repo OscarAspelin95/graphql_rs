@@ -1,15 +1,16 @@
 use crate::state::State as AppState;
-use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use axum::extract::State;
-use tracing::{Level, event};
+use axum::response::IntoResponse;
+use juniper::http::GraphQLRequest;
+use tracing::{event, Level};
 
 pub async fn graphql_handler(
     State(state): State<AppState>,
-    graphql_request: GraphQLRequest,
-) -> GraphQLResponse {
-    event!(Level::INFO, "got a request");
+    axum::Json(request): axum::Json<GraphQLRequest>,
+) -> impl IntoResponse {
+    event!(Level::INFO, "got a graphql request");
 
-    let res = state.gql_schema.execute(graphql_request.into_inner()).await;
+    let response = request.execute(&state.schema, &state.context).await;
 
-    res.into()
+    axum::Json(response)
 }

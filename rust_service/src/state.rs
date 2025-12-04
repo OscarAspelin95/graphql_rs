@@ -1,17 +1,16 @@
-use crate::context::get_gql_context;
-use crate::{Config, query::Query};
-
-use async_graphql::{EmptyMutation, EmptySubscription, Schema};
+use crate::context::{create_context, create_schema, Context, Schema};
+use crate::Config;
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct State {
-    pub gql_schema: Schema<Query, EmptyMutation, EmptySubscription>,
+    pub schema: Arc<Schema>,
+    pub context: Context,
 }
 
 pub async fn get_state(cfg: &Config) -> State {
-    let gql_schema = get_gql_context(cfg).await;
+    let schema = Arc::new(create_schema());
+    let context = create_context(cfg).await;
 
-    State {
-        gql_schema: gql_schema,
-    }
+    State { schema, context }
 }
