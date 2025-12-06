@@ -2,11 +2,11 @@ use crate::context::Context;
 use juniper::{graphql_object, FieldResult};
 use serde::{Deserialize, Serialize};
 use sqlx::types::time::OffsetDateTime;
-use uuid;
+use uuid::Uuid;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct User {
-    pub id: String,
+    pub id: Uuid,
     pub first_name: String,
     pub last_name: String,
     pub created_at: OffsetDateTime,
@@ -16,7 +16,7 @@ pub struct User {
 impl User {
     pub fn mock() -> Self {
         Self {
-            id: uuid::Uuid::now_v7().to_string(),
+            id: uuid::Uuid::now_v7(),
             first_name: "Mock".into(),
             last_name: "Mock".into(),
             created_at: OffsetDateTime::now_utc(),
@@ -27,7 +27,7 @@ impl User {
 
 #[graphql_object(context = Context)]
 impl User {
-    fn id(&self) -> &str {
+    fn id(&self) -> &Uuid {
         &self.id
     }
 
@@ -50,23 +50,20 @@ impl User {
     async fn todo_lists(&self, context: &Context) -> FieldResult<Vec<Todo>> {
         let pool = &context.db;
 
-        let user_uuid =
-            uuid::Uuid::parse_str(&self.id).map_err(|e| format!("Invalid UUID: {}", e))?;
-
         let todo_lists = sqlx::query_as!(
             Todo,
             "SELECT id, user_id, name, created_at, updated_at FROM public.todo_lists WHERE user_id = $1",
-            user_uuid
+            self.id
         )
         .fetch_all(pool)
         .await?;
 
-        Ok(todo_lists.into_iter().map(Todo::from).collect())
+        Ok(todo_lists)
     }
 }
 
 pub struct Todo {
-    pub id: String,
+    pub id: Uuid,
     pub user_id: String,
     pub name: String,
     pub created_at: OffsetDateTime,
@@ -75,7 +72,7 @@ pub struct Todo {
 
 #[graphql_object(context = Context)]
 impl Todo {
-    fn id(&self) -> &str {
+    fn id(&self) -> &Uuid {
         &self.id
     }
 
@@ -97,8 +94,8 @@ impl Todo {
 
     fn todo_tasks(&self) -> Vec<TodoTask> {
         vec![TodoTask {
-            id: 1,
-            todo_id: 1,
+            id: Uuid::now_v7(),
+            todo_id: Uuid::now_v7(),
             name: "Todo Task 1".to_string(),
             status: "Status".to_string(),
             created_at: OffsetDateTime::now_utc(),
@@ -109,8 +106,8 @@ impl Todo {
 
 #[derive(Clone)]
 pub struct TodoTask {
-    pub id: i32,
-    pub todo_id: i32,
+    pub id: Uuid,
+    pub todo_id: Uuid,
     pub name: String,
     pub status: String,
     pub created_at: OffsetDateTime,
@@ -119,11 +116,11 @@ pub struct TodoTask {
 
 #[graphql_object(context = Context)]
 impl TodoTask {
-    fn id(&self) -> i32 {
+    fn id(&self) -> Uuid {
         self.id
     }
 
-    fn todo_id(&self) -> i32 {
+    fn todo_id(&self) -> Uuid {
         self.todo_id
     }
 
